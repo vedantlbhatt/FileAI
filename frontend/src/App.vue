@@ -1,6 +1,6 @@
 <script setup>
 import { ref } from "vue";
-import { invoke } from "@tauri-apps/api/core";
+// import { invoke } from "@tauri-apps/api/core"; // No longer needed for agent calls
 
 const chatHistory = ref([]);
 const chatInput = ref("");
@@ -13,24 +13,67 @@ const sourcePath = ref("");
 const destinationPath = ref("");
 const searchQuery = ref("");
 
-// Unified function for directory actions
-async function executeFileSystemAction(operation, args) {
+// Function to call the Agent API
+async function callAgentApi(message) {
   try {
-    const response = await invoke("execute_file_system_workflow", { operation, args });
-    actionMsg.value = `Operation '${operation}' successful: ${JSON.stringify(response)}`;
-    chatHistory.value.push({ sender: "bot", text: actionMsg.value });
+    actionMsg.value = `Sending query to Agent API: "${message}"`;
+    chatHistory.value.push({ sender: "user", text: message });
+    const response = await fetch("http://localhost:3000/api/agent-query", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ message: message }),
+    });
+    const data = await response.json();
+
+    if (response.ok) {
+      if (data.response && data.response.message) {
+        actionMsg.value = `Agent Response: ${data.response.message}`;
+        chatHistory.value.push({ sender: "bot", text: data.response.message });
+      } else if (data.response) {
+        actionMsg.value = `Agent Response: ${JSON.stringify(data.response)}`;
+        chatHistory.value.push({ sender: "bot", text: JSON.stringify(data.response) });
+      } else {
+        actionMsg.value = `Agent Response (raw): ${JSON.stringify(data)}`;
+        chatHistory.value.push({ sender: "bot", text: JSON.stringify(data) });
+      }
+    } else {
+      actionMsg.value = `Agent API Error: ${data.error || response.statusText}`;
+      chatHistory.value.push({ sender: "bot", text: `Error: ${data.error || response.statusText}` });
+    }
   } catch (error) {
-    actionMsg.value = `Error during '${operation}': ${error}`;
-    chatHistory.value.push({ sender: "bot", text: actionMsg.value });
+    actionMsg.value = `Network Error: ${error.message}`;
+    chatHistory.value.push({ sender: "bot", text: `Network Error: ${error.message}` });
   }
 }
 
-// Chatbot functionality
+// Unified function for directory actions (now calls the API)
+async function executeFileSystemAction(operation, args) {
+  let message = "";
+  switch (operation) {
+    case 'read_file_content':
+      message = `Read the content of file: ${args.filePath}`;
+      break;
+    case 'list_directory':
+      message = `List files in directory: ${args.directoryPath}`;
+      break;
+    case 'move_file':
+      message = `Move file from ${args.sourcePath} to ${args.destinationPath}`;
+      break;
+    case 'search_file_semantic':
+      message = `Semantically search for "${args.query}" in directory: ${args.targetDirectory || '.'}`;
+      break;
+    default:
+      message = `Perform unknown operation: ${operation} with args: ${JSON.stringify(args)}`;
+  }
+  await callAgentApi(message);
+}
+
+// Chatbot functionality (now calls the API)
 async function sendChat() {
   if (!chatInput.value) return;
-  chatHistory.value.push({ sender: "user", text: chatInput.value });
-  const response = await invoke("chatbot_query", { message: chatInput.value });
-  chatHistory.value.push({ sender: "bot", text: response });
+  await callAgentApi(chatInput.value);
   chatInput.value = "";
 }
 </script>

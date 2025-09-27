@@ -1,9 +1,12 @@
 import express from 'express';
+import cors from 'cors';
 import { mastra } from './mastra/index.js';
+import { fileSystemWorkflow } from './mastra/workflows/file-system-workflow.js';
 
 const app = express();
 const port = 3000; // Choose a port for your API server
 
+app.use(cors()); // Enable CORS for all routes
 app.use(express.json()); // Middleware to parse JSON request bodies
 
 // Basic logging middleware
@@ -23,13 +26,7 @@ app.post('/api/agent-query', async (req, res) => {
   try {
     console.log(`API: Received query for Mastra agent: "${message}"`);
     
-    // Get the workflow instance directly from the mastra object
-    const fileSystemWorkflowInstance = mastra.getWorkflow('file-system-workflow');
-    if (!fileSystemWorkflowInstance) {
-      return res.status(500).json({ error: "file-system-workflow not found in Mastra instance." });
-    }
-
-    const result = await mastra.execute(fileSystemWorkflowInstance, { 
+    const result = await mastra.execute(fileSystemWorkflow, { 
       message: message // Pass the raw message to the workflow
     });
     console.log("API: Mastra Workflow Result:", result);
@@ -43,6 +40,7 @@ app.post('/api/agent-query', async (req, res) => {
   }
 });
 
+// Start the server
 app.listen(port, () => {
   console.log(`Agent API server listening on http://localhost:${port}`);
 });

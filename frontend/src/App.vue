@@ -2,7 +2,7 @@
 import { ref, onMounted, computed } from "vue";
 
 // State management
-const currentPath = ref("/Users/vedantbhatt");
+const currentPath = ref("/Users/rohannair");
 const files = ref([]);
 const selectedFiles = ref(new Set());
 const chatHistory = ref([]);
@@ -24,36 +24,75 @@ async function callAgentApi(message) {
   });
   
   try {
+    console.log("Sending request to Mastra server...");
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+
     const response = await fetch("http://localhost:3000/api/agent-query", {
       method: "POST",
       headers: {
-        "Content-Type": "application/json",
+        "Content-Type": "application/json"
       },
       body: JSON.stringify({ message: message }),
+      signal: controller.signal,
+      mode: 'cors'
     });
     
-    const data = await response.json();
+    console.log("Response received:", response.status, response.statusText);
     
     if (response.ok) {
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
       let responseText = "";
-      let responseData = data.response;
       
-      // Handle different response formats
-      if (responseData && responseData.message) {
-        responseText = responseData.message;
-      } else if (responseData && responseData.contents) {
-        // This is a directory listing response
-        files.value = responseData.contents;
-        responseText = `Found ${responseData.contents.length} items in ${currentPath.value}`;
-      } else if (responseData) {
-        responseText = JSON.stringify(responseData, null, 2);
-      } else {
-        responseText = JSON.stringify(data, null, 2);
+      try {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          
+          const chunk = decoder.decode(value);
+          const lines = chunk.split('\n');
+          
+          for (const line of lines) {
+            if (!line) continue;
+            
+            if (line.startsWith('0:')) {
+              // Text chunk - remove quotes and unescape the text
+              const chunk = line.slice(2).trim();
+              // Remove surrounding quotes if present
+              const unquoted = chunk.replace(/^"|"$/g, '');
+              responseText += unquoted;
+              
+              // Update UI immediately for better responsiveness
+              chatHistory.value[chatHistory.value.length - 1] = { 
+                sender: "bot", 
+                text: responseText.trim(),
+                timestamp: new Date()
+              };
+            } else if (line.startsWith('e:') || line.startsWith('d:')) {
+              // End of stream, parse the response
+              try {
+                const jsonResponse = JSON.parse(responseText);
+                if (jsonResponse && jsonResponse.contents) {
+                  // This is a directory listing response
+                  files.value = jsonResponse.contents;
+                  responseText = `Found ${jsonResponse.contents.length} items in ${currentPath.value}`;
+                }
+              } catch (e) {
+                // If not valid JSON, use the text as is
+                console.log('Using raw text response');
+              }
+              return; // Exit early when we're done
+            }
+          }
+        }
+      } finally {
+        clearTimeout(timeout); // Clean up timeout
       }
       
       chatHistory.value.push({ 
         sender: "bot", 
-        text: responseText,
+        text: responseText.trim(),
         timestamp: new Date()
       });
       
@@ -69,9 +108,10 @@ async function callAgentApi(message) {
       });
     }
   } catch (error) {
+    console.error("Error details:", error);
     chatHistory.value.push({ 
       sender: "bot", 
-      text: `Network Error: ${error.message}`,
+      text: `Network Error: ${error.message}. Please check the browser console for more details.`,
       timestamp: new Date()
     });
   } finally {
@@ -88,20 +128,60 @@ async function sendChat() {
 // File system operations
 async function loadFiles() {
   try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+
     const response = await fetch("http://localhost:3000/api/agent-query", {
       method: "POST",
       headers: {
-        "Content-Type": "application/json",
+        "Content-Type": "application/json"
       },
-      body: JSON.stringify({ message: `List files in directory: ${currentPath.value}` }),
+      body: JSON.stringify({ messages: [{ role: 'user', content: `List files in directory: ${currentPath.value}` }] }),
+      signal: controller.signal
     });
     
-    const data = await response.json();
-    
-    if (response.ok && data.response && data.response.contents) {
-      files.value = data.response.contents;
+    if (response.ok) {
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let responseText = "";
+      
+      try {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          
+          const chunk = decoder.decode(value);
+          const lines = chunk.split('\n');
+          
+          for (const line of lines) {
+            if (!line) continue;
+            
+            if (line.startsWith('0:')) {
+              // Text chunk - remove quotes and unescape the text
+              const chunk = line.slice(2).trim();
+              // Remove surrounding quotes if present
+              const unquoted = chunk.replace(/^"|"$/g, '');
+              responseText += unquoted;
+            } else if (line.startsWith('e:') || line.startsWith('d:')) {
+              // End of stream, try to parse the response
+              try {
+                const jsonResponse = JSON.parse(responseText);
+                if (jsonResponse && jsonResponse.contents) {
+                  files.value = jsonResponse.contents;
+                  return;
+                }
+              } catch (e) {
+                console.error("Failed to parse file list response:", e);
+              }
+              return; // Exit early when we're done
+            }
+          }
+        }
+      } finally {
+        clearTimeout(timeout); // Clean up timeout
+      }
     } else {
-      console.error("Failed to load files:", data);
+      console.error("Failed to load files:", response.statusText);
     }
   } catch (error) {
     console.error("Error loading files:", error);
@@ -210,16 +290,16 @@ onMounted(() => {
             </button>
           </div>
           <div class="sidebar-content" v-if="!sidebarCollapsed">
-            <div class="sidebar-item" @click="navigateToPath('/Users/vedantbhatt')">
+            <div class="sidebar-item" @click="navigateToPath('/Users/rohannair')">
               <span class="icon">🏠</span> Home
             </div>
-            <div class="sidebar-item" @click="navigateToPath('/Users/vedantbhatt/Desktop')">
+            <div class="sidebar-item" @click="navigateToPath('/Users/rohannair/Desktop')">
               <span class="icon">🖥️</span> Desktop
             </div>
-            <div class="sidebar-item" @click="navigateToPath('/Users/vedantbhatt/Documents')">
+            <div class="sidebar-item" @click="navigateToPath('/Users/rohannair/Documents')">
               <span class="icon">📄</span> Documents
             </div>
-            <div class="sidebar-item" @click="navigateToPath('/Users/vedantbhatt/Downloads')">
+            <div class="sidebar-item" @click="navigateToPath('/Users/rohannair/Downloads')">
               <span class="icon">⬇️</span> Downloads
             </div>
           </div>

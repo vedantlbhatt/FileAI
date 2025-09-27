@@ -6,7 +6,8 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "dev": "mastra dev",
     "build": "mastra build",
-    "start": "mastra start"
+    "start": "mastra start",
+    "start-api": "node --experimental-specifier-resolution=node dist/api-server.js"
   },
   "keywords": [],
   "author": "",
@@ -22,11 +23,16 @@
     "@mastra/libsql": "^0.14.3",
     "@mastra/loggers": "^0.10.13",
     "@mastra/memory": "^0.15.3",
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.3",
+    "cors": "^2.8.5",
+    "express": "^5.1.0",
     "zod": "^3.25.76"
   },
   "devDependencies": {
     "@types/node": "^24.5.2",
     "mastra": "^0.13.2",
+    "ts-node": "^10.9.2",
     "typescript": "^5.9.2"
   }
 }

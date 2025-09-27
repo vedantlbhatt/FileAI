@@ -1,6 +1,7 @@
 use tauri::{command, generate_handler};
 use serde_json::Value;
 use std::process::Command;
+use std::path::PathBuf;
 
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
 #[tauri::command]
@@ -10,37 +11,52 @@ fn greet(name: &str) -> String {
 
 #[tauri::command]
 async fn execute_file_system_workflow(operation: String, args: Value) -> Result<String, String> {
-    println!("Received operation: {} with args: {:?}", operation, args);
+    println!("[Rust] Received operation: {} with args: {:?}", operation, args);
     // TODO: Implement actual call to Mastra fileSystemWorkflow
     Ok(format!("Successfully received operation: {} with args: {:?}", operation, args))
 }
 
 #[tauri::command]
 async fn chatbot_query(message: String) -> Result<String, String> {
-    println!("Chatbot received message: {}", message);
+    println!("[Rust] Chatbot received message: {}", message);
 
-    let agent_path = "../../agent/src/run-mastra-query.ts"; // Path to the TypeScript script
-    let current_dir = std::env::current_dir()
-        .map_err(|e| format!("Failed to get current directory: {}", e))?;
+    let current_tauri_dir = std::env::current_dir()
+        .map_err(|e| format!("[Rust] Failed to get current Tauri directory: {}", e))?;
+    println!("[Rust] Current Tauri directory: {:?}", current_tauri_dir);
+
+    let project_root_dir = current_tauri_dir
+        .parent().ok_or_else(|| String::from("[Rust] Failed to get parent of src-tauri"))?
+        .parent().ok_or_else(|| String::from("[Rust] Failed to get parent of frontend/"))?;
     
-    // Construct the command to run ts-node
-    // We'll need to make sure ts-node is installed globally or locally in the agent project
-    let output = Command::new("npx")
-        .arg("ts-node")
-        .arg(&agent_path)
-        .arg(&message) // Pass the message as a command-line argument
-        .current_dir(current_dir.join("agent")) // Run npx ts-node from the agent directory
+    let agent_project_root_dir = project_root_dir.join("agent");
+    println!("[Rust] Calculated agent project root directory: {:?}", agent_project_root_dir);
+
+    let agent_entry_script = agent_project_root_dir.join("run-agent.js"); // Path to the new JS entry point
+
+    if !agent_entry_script.exists() {
+        return Err(format!("[Rust] Error: Agent JavaScript entry script not found at {:?}. Did you create 'run-agent.js' in the agent directory?", agent_entry_script));
+    }
+    println!("[Rust] Full path to agent JavaScript entry script: {:?}", agent_entry_script);
+
+    println!("[Rust] Constructing command: node {:?} {}", agent_entry_script, message);
+
+    let output = Command::new("node")
+        .arg(&agent_entry_script) // Pass the ABSOLUTE path to the JS script
+        .arg(&message)             // Pass the message as a command-line argument
+        .current_dir(&agent_project_root_dir) // Run node from the agent project root
         .output()
-        .map_err(|e| format!("Failed to execute ts-node process: {}", e))?;
+        .map_err(|e| format!("[Rust] Failed to execute node process: {}", e))?;
+
+    println!("[Rust] Command finished. Status: {}", output.status);
 
     if output.status.success() {
         let stdout = String::from_utf8_lossy(&output.stdout).to_string();
-        println!("Mastra Agent Response: {}", stdout);
+        println!("[Rust] Mastra Agent STDOUT: {}", stdout);
         Ok(stdout)
     } else {
         let stderr = String::from_utf8_lossy(&output.stderr).to_string();
-        eprintln!("Mastra Agent Error: {}", stderr);
-        Err(format!("Mastra Agent failed: {}", stderr))
+        eprintln!("[Rust] Mastra Agent STDERR: {}", stderr);
+        Err(format!("[Rust] Mastra Agent failed: {}", stderr))
     }
 }
 

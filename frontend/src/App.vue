@@ -43,9 +43,7 @@ async function sendChat() {
     <section class="finder-main">
       
       <section class="finder-content">
-        <div class="finder-toolbar">
-          <span>{{ actionMsg }}</span>
-        </div>
+    
 
         <div class="finder-actions-sidebar">
           <button @click="executeFileSystemAction('read_file_content', { filePath: filePath })" title="Read File Content">

@@ -1,8 +1,28 @@
 import os
 from typing import List
 from sentence_transformers import SentenceTransformer
+import faiss
+import numpy as np
 
-# File format parsers
+
+from striprtf.striprtf import rtf_to_text
+import subprocess
+
+
+def parse_rtf_unrtf(file_path):
+    result = subprocess.run(['unrtf', '--text', file_path], capture_output=True, text=True)
+    if result.returncode == 0:
+        return result.stdout.strip()
+    else:
+        print(f"UnRTF failed: {result.stderr}")
+        return ""
+
+
+def clean_text(text: str) -> str:
+    lines = [line.strip() for line in text.splitlines()]
+    return '\n'.join([line for line in lines if line])
+
+
 def parse_txt(filepath: str) -> str:
     try:
         with open(filepath, 'r', encoding='utf-8') as f:
@@ -18,8 +38,11 @@ def parse_pdf(filepath: str) -> str:
     with open(filepath, 'rb') as f:
         reader = PyPDF2.PdfReader(f)
         for page in reader.pages:
-            text += page.extract_text() + "\n"
+            page_text = page.extract_text()
+            if page_text:
+                text += page_text + "\n"
     return text
+
 
 def parse_docx(filepath: str) -> str:
     import docx
@@ -29,56 +52,82 @@ def parse_docx(filepath: str) -> str:
         full_text.append(para.text)
     return "\n".join(full_text)
 
-# Main parser dispatcher based on file extension
+
 def parse_file(filepath: str) -> str:
     ext = os.path.splitext(filepath)[1].lower()
     if ext == '.txt':
-        return parse_txt(filepath)
+        raw_text = parse_txt(filepath)
     elif ext == '.pdf':
-        return parse_pdf(filepath)
+        raw_text = parse_pdf(filepath)
     elif ext == '.docx':
-        return parse_docx(filepath)
-    else:
-        raise ValueError(f"Unsupported file extension: {ext}")
-
-# Chunk text into smaller pieces (split by double newlines)
-def chunk_text(text: str) -> List[str]:
-    chunks = [chunk.strip() for chunk in text.split("\n\n") if chunk.strip()]
-    return chunks
-
-# Generate semantic embeddings from text chunks
-def get_embeddings(chunks: List[str], model_name: str = 'all-MiniLM-L6-v2'):
-    model = SentenceTransformer(model_name)
-    embeddings = model.encode(chunks)
-    return embeddings
-
-# Example usage
-def process_files(filepaths: List[str]):
-    all_chunks = []
-    for path in filepaths:
+        raw_text = parse_docx(filepath)
+    elif ext == '.rtf':
         try:
-            text = parse_file(path)
-            chunks = chunk_text(text)
-            all_chunks.extend(chunks)
+            with open(filepath, 'r', encoding='utf-8') as f:
+                raw_rtf = f.read()
+            raw_text = parse_rtf_unrtf(filepath)
         except Exception as e:
-            print(f"Error processing {path}: {e}")
-    embeddings = get_embeddings(all_chunks)
-    return all_chunks, embeddings
+            print(f"Error parsing RTF file {filepath}: {e}")
+            raw_text = ""
+    else:
+        raw_text = "" 
+    
+    return clean_text(raw_text)
 
-def get_all_files(directory: str, extensions=('.txt', '.pdf', '.docx')):
+
+def get_all_files_and_parse(directory: str, extensions=('.txt', '.pdf', '.docx', '.rtf')) -> List[str]:
+    all_texts = []
     file_paths = []
     for root, dirs, files in os.walk(directory):
-        if 'Chrome/Default/WebStorage' in root:
-            continue  # skip Chrome cache folders
         for file in files:
             if file.lower().endswith(extensions):
-                file_paths.append(os.path.join(root, file))
-    return file_paths
+                path = os.path.join(root, file)
+                try:
+                    text = parse_file(path)
+                    if text:
+                        all_texts.append(text)
+                        file_paths.append(path)
+                except Exception as e:
+                    print(f"Error parsing {path}: {e}")
+    return all_texts, file_paths
+
+def embed_and_index(texts: List[str]):
+    model = SentenceTransformer('all-MiniLM-L6-v2')
+    embeddings = model.encode(texts, convert_to_tensor=False)
+    embeddings_np = np.array(embeddings).astype('float32')
+    dimension = embeddings_np.shape[1]
+    index = faiss.IndexFlatL2(dimension)
+    index.add(embeddings_np)
+    return index, model
+
+
+def semantic_search(index, model, metadata, query: str, k: int = 5):
+    k = min(k, len(metadata)) 
+    query_embedding = model.encode([query], convert_to_tensor=False)
+    query_embedding_np = np.array(query_embedding).astype('float32')
+    distances, indices = index.search(query_embedding_np, k)
+    results = []
+    for dist, idx in zip(distances[0], indices[0]):
+        file_path = metadata[idx]
+        results.append({'file_path': file_path, 'distance': dist})
+    return results
 
 
 
 if __name__ == "__main__":
-    dir_to_process = '/Users/vedantbhatt'  # or your target folder
-    files_to_process = get_all_files(dir_to_process)
-    chunks, embeddings = process_files(files_to_process)
-    print(f"Processed {len(chunks)} text chunks from {len(files_to_process)} files.")
+    directory_path = '/Users/vedantbhatt/source'
+    print("Parsing files...")
+    parsed_texts, file_paths = get_all_files_and_parse(directory_path)
+    print(f"Parsed text from {len(parsed_texts)} files.")
+
+    print("Embedding texts and building index...")
+    index, model = embed_and_index(parsed_texts)
+
+
+    query_text = "2110 Homework 2"
+    print(f"Searching for top matches to query: {query_text}")
+    top_results = semantic_search(index, model, file_paths, query_text, k=3)
+    
+    for res in top_results:
+        print(f"File: {res['file_path']}, Distance: {res['distance']}")
+

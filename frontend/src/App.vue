@@ -2,159 +2,215 @@
 import { ref } from "vue";
 import { invoke } from "@tauri-apps/api/core";
 
-const greetMsg = ref("");
-const name = ref("");
+const chatHistory = ref([]);
+const chatInput = ref("");
+const actionMsg = ref("");
 
-async function greet() {
-  // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
-  greetMsg.value = await invoke("greet", { name: name.value });
+// Directory actions
+async function sortDirectory() {
+  actionMsg.value = await invoke("sort_directory");
+}
+async function semanticSearch() {
+  actionMsg.value = await invoke("semantic_search_directory");
+}
+async function moveContent() {
+  actionMsg.value = await invoke("move_content_directory");
+}
+
+// Chatbot functionality
+async function sendChat() {
+  if (!chatInput.value) return;
+  chatHistory.value.push({ sender: "user", text: chatInput.value });
+  const response = await invoke("chatbot_query", { message: chatInput.value });
+  chatHistory.value.push({ sender: "bot", text: response });
+  chatInput.value = "";
 }
 </script>
 
 <template>
-  <main class="container">
-    <h1>Welcome to Tauri + Vue</h1>
-
-    <div class="row">
-      <a href="https://vitejs.dev" target="_blank">
-        <img src="/vite.svg" class="logo vite" alt="Vite logo" />
-      </a>
-      <a href="https://tauri.app" target="_blank">
-        <img src="/tauri.svg" class="logo tauri" alt="Tauri logo" />
-      </a>
-      <a href="https://vuejs.org/" target="_blank">
-        <img src="./assets/vue.svg" class="logo vue" alt="Vue logo" />
-      </a>
-    </div>
-    <p>Click on the Tauri, Vite, and Vue logos to learn more.</p>
-
-    <form class="row" @submit.prevent="greet">
-      <input id="greet-input" v-model="name" placeholder="Enter a name..." />
-      <button type="submit">Greet</button>
-    </form>
-    <p>{{ greetMsg }}</p>
+  <main class="finder-container">
+    <header class="finder-header">
+      <span class="finder-title">FileAI!</span>
+      <div class="finder-actions">
+        <button @click="sortDirectory" title="Sort Directory">
+          <span class="icon">⇅</span> Sort
+        </button>
+        <button @click="semanticSearch" title="Semantic Search">
+          <span class="icon">🔍</span> Search
+        </button>
+        <button @click="moveContent" title="Move Content">
+          <span class="icon">📁</span> Move
+        </button>
+      </div>
+    </header>
+    <section class="finder-main">
+      <aside class="finder-sidebar">
+        <ul>
+          <li><span class="icon">🏠</span> Home</li>
+          <li><span class="icon">📄</span> Documents</li>
+          <li><span class="icon">🖼️</span> Pictures</li>
+          <li><span class="icon">🎵</span> Music</li>
+          <li><span class="icon">📥</span> Downloads</li>
+        </ul>
+      </aside>
+      <section class="finder-content">
+        <div class="finder-toolbar">
+          <span>{{ actionMsg }}</span>
+        </div>
+        <div class="finder-chat">
+          <h2 class="chat-title">Request a file operation!</h2>
+          <div class="chat-history">
+            <div v-for="(msg, idx) in chatHistory" :key="idx" :class="msg.sender">
+              <span>{{ msg.text }}</span>
+            </div>
+          </div>
+          <form class="chat-input-row" @submit.prevent="sendChat">
+            <input v-model="chatInput" placeholder="Type your message..." />
+            <button type="submit">Send</button>
+          </form>
+        </div>
+      </section>
+    </section>
   </main>
 </template>
 
 <style scoped>
-.logo.vite:hover {
-  filter: drop-shadow(0 0 2em #747bff);
-}
-
-.logo.vue:hover {
-  filter: drop-shadow(0 0 2em #249b73);
-}
-
-</style>
-<style>
-:root {
-  font-family: Inter, Avenir, Helvetica, Arial, sans-serif;
-  font-size: 16px;
-  line-height: 24px;
-  font-weight: 400;
-
-  color: #0f0f0f;
-  background-color: #f6f6f6;
-
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  -webkit-text-size-adjust: 100%;
-}
-
-.container {
-  margin: 0;
-  padding-top: 10vh;
+.finder-container {
+  background: #f9f9fa;
+  min-height: 100vh;
   display: flex;
   flex-direction: column;
-  justify-content: center;
-  text-align: center;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
 }
-
-.logo {
-  height: 6em;
-  padding: 1.5em;
-  will-change: filter;
-  transition: 0.75s;
-}
-
-.logo.tauri:hover {
-  filter: drop-shadow(0 0 2em #24c8db);
-}
-
-.row {
+.finder-header {
   display: flex;
-  justify-content: center;
+  align-items: center;
+  justify-content: space-between;
+  background: #eaeaea;
+  padding: 0.75em 2em;
+  border-bottom: 1px solid #d0d0d0;
 }
-
-a {
-  font-weight: 500;
-  color: #646cff;
-  text-decoration: inherit;
+.finder-title {
+  font-size: 1.5em;
+  font-weight: 600;
+  color: #333;
 }
-
-a:hover {
-  color: #535bf2;
+.finder-actions button {
+  margin-left: 1em;
+  background: #fff;
+  border: 1px solid #d0d0d0;
+  border-radius: 6px;
+  padding: 0.5em 1em;
+  font-size: 1em;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5em;
+  transition: background 0.2s, border-color 0.2s;
 }
-
-h1 {
-  text-align: center;
+.finder-actions button:hover {
+  background: #f0f0f0;
+  border-color: #396cd8;
 }
-
-input,
-button {
+.icon {
+  font-size: 1.2em;
+}
+.finder-main {
+  display: flex;
+  flex: 1;
+}
+.finder-sidebar {
+  width: 180px;
+  background: #f3f3f6;
+  border-right: 1px solid #d0d0d0;
+  padding: 1em 0.5em;
+}
+.finder-sidebar ul {
+  list-style: none;
+  padding: 0;
+}
+.finder-sidebar li {
+  padding: 0.7em 1em;
+  margin-bottom: 0.2em;
+  border-radius: 5px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.7em;
+  color: #444;
+  transition: background 0.2s;
+}
+.finder-sidebar li:hover {
+  background: #e0e7ff;
+}
+.finder-content {
+  flex: 1;
+  padding: 2em;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+}
+.finder-toolbar {
+  margin-bottom: 1em;
+  font-size: 1em;
+  color: #396cd8;
+}
+.finder-chat {
+  background: #fff;
   border-radius: 8px;
-  border: 1px solid transparent;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+  padding: 1em;
+  max-width: 600px;
+  margin: 0 auto;
+}
+.chat-title {
+  text-align: center;
+  font-size: 1.15em;
+  font-weight: 500;
+  margin-bottom: 0.7em;
+  color: #396cd8;
+}
+.chat-history {
+  min-height: 120px;
+  margin-bottom: 1em;
+  text-align: left;
+}
+.user {
+  color: #396cd8;
+  font-weight: bold;
+}
+.bot {
+  color: #24c8db;
+  font-weight: bold;
+}
+.chat-input-row {
+  display: flex;
+  gap: 0.5em;
+}
+input {
+  border-radius: 8px;
+  border: 1px solid #ccc;
   padding: 0.6em 1.2em;
   font-size: 1em;
-  font-weight: 500;
   font-family: inherit;
   color: #0f0f0f;
   background-color: #ffffff;
-  transition: border-color 0.25s;
-  box-shadow: 0 2px 2px rgba(0, 0, 0, 0.2);
-}
-
-button {
-  cursor: pointer;
-}
-
-button:hover {
-  border-color: #396cd8;
-}
-button:active {
-  border-color: #396cd8;
-  background-color: #e8e8e8;
-}
-
-input,
-button {
   outline: none;
+  flex: 1;
 }
-
-#greet-input {
-  margin-right: 5px;
+button[type="submit"] {
+  border-radius: 8px;
+  border: 1px solid #396cd8;
+  padding: 0.6em 1.2em;
+  font-size: 1em;
+  font-family: inherit;
+  color: #fff;
+  background-color: #396cd8;
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s;
 }
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    color: #f6f6f6;
-    background-color: #2f2f2f;
-  }
-
-  a:hover {
-    color: #24c8db;
-  }
-
-  input,
-  button {
-    color: #ffffff;
-    background-color: #0f0f0f98;
-  }
-  button:active {
-    background-color: #0f0f0f69;
-  }
+button[type="submit"]:hover {
+  background: #274ea3;
+  border-color: #274ea3;
 }
-
 </style>

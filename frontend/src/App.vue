@@ -6,15 +6,23 @@ const chatHistory = ref([]);
 const chatInput = ref("");
 const actionMsg = ref("");
 
-// Directory actions
-async function sortDirectory() {
-  actionMsg.value = await invoke("sort_directory");
-}
-async function semanticSearch() {
-  actionMsg.value = await invoke("semantic_search_directory");
-}
-async function moveContent() {
-  actionMsg.value = await invoke("move_content_directory");
+// New reactive variables for file system operations
+const filePath = ref("");
+const directoryPath = ref("");
+const sourcePath = ref("");
+const destinationPath = ref("");
+const searchQuery = ref("");
+
+// Unified function for directory actions
+async function executeFileSystemAction(operation, args) {
+  try {
+    const response = await invoke("execute_file_system_workflow", { operation, args });
+    actionMsg.value = `Operation '${operation}' successful: ${JSON.stringify(response)}`;
+    chatHistory.value.push({ sender: "bot", text: actionMsg.value });
+  } catch (error) {
+    actionMsg.value = `Error during '${operation}': ${error}`;
+    chatHistory.value.push({ sender: "bot", text: actionMsg.value });
+  }
 }
 
 // Chatbot functionality
@@ -32,15 +40,26 @@ async function sendChat() {
     <header class="finder-header">
       <span class="finder-title">FileAI!</span>
       <div class="finder-actions">
-        <button @click="sortDirectory" title="Sort Directory">
-          <span class="icon">⇅</span> Sort
+        <button @click="executeFileSystemAction('read_file_content', { filePath: filePath })" title="Read File Content">
+          <span class="icon">📄</span> Read File
         </button>
-        <button @click="semanticSearch" title="Semantic Search">
+        <input v-model="filePath" placeholder="File path to read" class="action-input" />
+
+        <button @click="executeFileSystemAction('list_directory', { directoryPath: directoryPath })" title="List Directory">
+          <span class="icon">📂</span> List Dir
+        </button>
+        <input v-model="directoryPath" placeholder="Directory path to list" class="action-input" />
+
+        <button @click="executeFileSystemAction('move_file', { sourcePath: sourcePath, destinationPath: destinationPath })" title="Move File">
+          <span class="icon">📁</span> Move File
+        </button>
+        <input v-model="sourcePath" placeholder="Source path" class="action-input" />
+        <input v-model="destinationPath" placeholder="Destination path" class="action-input" />
+
+        <button @click="executeFileSystemAction('search_file_semantic', { query: searchQuery })" title="Semantic Search">
           <span class="icon">🔍</span> Search
         </button>
-        <button @click="moveContent" title="Move Content">
-          <span class="icon">📁</span> Move
-        </button>
+        <input v-model="searchQuery" placeholder="Semantic search query" class="action-input" />
       </div>
     </header>
     <section class="finder-main">
@@ -212,5 +231,13 @@ button[type="submit"] {
 button[type="submit"]:hover {
   background: #274ea3;
   border-color: #274ea3;
+}
+.action-input {
+  margin-left: 1em;
+  border-radius: 6px;
+  border: 1px solid #d0d0d0;
+  padding: 0.5em 1em;
+  font-size: 1em;
+  outline: none;
 }
 </style>

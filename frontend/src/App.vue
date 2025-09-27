@@ -39,43 +39,37 @@ async function sendChat() {
   <main class="finder-container">
     <header class="finder-header">
       <span class="finder-title">FileAI!</span>
-      <div class="finder-actions">
-        <button @click="executeFileSystemAction('read_file_content', { filePath: filePath })" title="Read File Content">
-          <span class="icon">📄</span> Read File
-        </button>
-        <input v-model="filePath" placeholder="File path to read" class="action-input" />
-
-        <button @click="executeFileSystemAction('list_directory', { directoryPath: directoryPath })" title="List Directory">
-          <span class="icon">📂</span> List Dir
-        </button>
-        <input v-model="directoryPath" placeholder="Directory path to list" class="action-input" />
-
-        <button @click="executeFileSystemAction('move_file', { sourcePath: sourcePath, destinationPath: destinationPath })" title="Move File">
-          <span class="icon">📁</span> Move File
-        </button>
-        <input v-model="sourcePath" placeholder="Source path" class="action-input" />
-        <input v-model="destinationPath" placeholder="Destination path" class="action-input" />
-
-        <button @click="executeFileSystemAction('search_file_semantic', { query: searchQuery })" title="Semantic Search">
-          <span class="icon">🔍</span> Search
-        </button>
-        <input v-model="searchQuery" placeholder="Semantic search query" class="action-input" />
-      </div>
     </header>
     <section class="finder-main">
-      <aside class="finder-sidebar">
-        <ul>
-          <li><span class="icon">🏠</span> Home</li>
-          <li><span class="icon">📄</span> Documents</li>
-          <li><span class="icon">🖼️</span> Pictures</li>
-          <li><span class="icon">🎵</span> Music</li>
-          <li><span class="icon">📥</span> Downloads</li>
-        </ul>
-      </aside>
+      
       <section class="finder-content">
         <div class="finder-toolbar">
           <span>{{ actionMsg }}</span>
         </div>
+
+        <div class="finder-actions-sidebar">
+          <button @click="executeFileSystemAction('read_file_content', { filePath: filePath })" title="Read File Content">
+            <span class="icon">📄</span> Read File
+          </button>
+          <input v-model="filePath" placeholder="File path to read" class="action-input" />
+
+          <button @click="executeFileSystemAction('list_directory', { directoryPath: directoryPath })" title="List Directory">
+            <span class="icon">📂</span> List Dir
+          </button>
+          <input v-model="directoryPath" placeholder="Directory path to list" class="action-input" />
+
+          <button @click="executeFileSystemAction('move_file', { sourcePath: sourcePath, destinationPath: destinationPath })" title="Move File">
+            <span class="icon">📁</span> Move File
+          </button>
+          <input v-model="sourcePath" placeholder="Source path" class="action-input" />
+          <input v-model="destinationPath" placeholder="Destination path" class="action-input" />
+
+          <button @click="executeFileSystemAction('search_file_semantic', { query: searchQuery })" title="Semantic Search">
+            <span class="icon">🔍</span> Search
+          </button>
+          <input v-model="searchQuery" placeholder="Semantic search query" class="action-input" />
+        </div>
+
         <div class="finder-chat">
           <h2 class="chat-title">Request a file operation!</h2>
           <div class="chat-history">
@@ -137,12 +131,21 @@ async function sendChat() {
 .finder-main {
   display: flex;
   flex: 1;
+  justify-content: space-between; /* Space out children */
 }
-.finder-sidebar {
-  width: 180px;
+
+.finder-actions-sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 1em; /* Space between action items */
+  padding: 1em;
   background: #f3f3f6;
-  border-right: 1px solid #d0d0d0;
-  padding: 1em 0.5em;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+}
+
+.finder-sidebar {
+  display: none; /* Hide the sidebar */
 }
 .finder-sidebar ul {
   list-style: none;
@@ -166,8 +169,9 @@ async function sendChat() {
   flex: 1;
   padding: 2em;
   display: flex;
-  flex-direction: column;
-  align-items: stretch;
+  flex-direction: row; /* Arrange children horizontally */
+  align-items: flex-start; /* Align items to the top */
+  gap: 2em; /* Space between sidebar and chat */
 }
 .finder-toolbar {
   margin-bottom: 1em;
@@ -179,8 +183,8 @@ async function sendChat() {
   border-radius: 8px;
   box-shadow: 0 2px 8px rgba(0,0,0,0.04);
   padding: 1em;
-  max-width: 600px;
-  margin: 0 auto;
+  max-width: 100%; /* Increased max-width to fill container */
+  margin: 0; /* Align to left */
 }
 .chat-title {
   text-align: center;
@@ -190,7 +194,7 @@ async function sendChat() {
   color: #396cd8;
 }
 .chat-history {
-  min-height: 120px;
+  min-height: 300px; /* Increased min-height */
   margin-bottom: 1em;
   text-align: left;
 }

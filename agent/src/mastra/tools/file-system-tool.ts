@@ -2,6 +2,8 @@ import { createTool } from '@mastra/core/tools';
 import { z } from 'zod';
 import * as fs from 'fs/promises';
 import * as path from 'path';
+import * as zlib from 'zlib'; // Import zlib for compression
+import { pipeline } from 'stream/promises'; // Import pipeline for streams
 
 const read_file_content = createTool({
   id: 'read-file-content',
@@ -82,9 +84,104 @@ const search_file_semantic = createTool({
   },
 });
 
+const delete_file = createTool({
+  id: 'delete-file',
+  description: 'Deletes a specified file',
+  inputSchema: z.object({
+    filePath: z.string().describe('The path to the file to delete'),
+  }),
+  outputSchema: z.object({
+    success: z.boolean(),
+    message: z.string(),
+  }),
+  execute: async ({ context }) => {
+    try {
+      await fs.unlink(context.filePath);
+      return { success: true, message: `File '${context.filePath}' deleted successfully` };
+    } catch (error: any) {
+      throw new Error(`Failed to delete file '${context.filePath}': ${error.message}`);
+    }
+  },
+});
+
+const compress_file = createTool({
+  id: 'compress-file',
+  description: 'Compresses a specified file using gzip',
+  inputSchema: z.object({
+    filePath: z.string().describe('The path to the file to compress'),
+    outputFilePath: z.string().describe('The path for the compressed output file (e.g., file.txt.gz)').optional(),
+  }),
+  outputSchema: z.object({
+    success: z.boolean(),
+    message: z.string(),
+    outputFilePath: z.string().optional(),
+  }),
+  execute: async ({ context }) => {
+    try {
+      const inputPath = context.filePath;
+      const outputPath = context.outputFilePath || `${inputPath}.gz`;
+
+      const gzip = zlib.createGzip();
+      const source = fs.createReadStream(inputPath);
+      const destination = fs.createWriteStream(outputPath);
+
+      await pipeline(source, gzip, destination);
+
+      return { success: true, message: `File '${inputPath}' compressed to '${outputPath}'`, outputFilePath: outputPath };
+    } catch (error: any) {
+      throw new Error(`Failed to compress file '${context.filePath}': ${error.message}`);
+    }
+  },
+});
+
+const create_file = createTool({
+  id: 'create-file',
+  description: 'Creates a new file with optional content.',
+  inputSchema: z.object({
+    filePath: z.string().describe('The path for the new file'),
+    content: z.string().describe('Optional content to write to the file').optional(),
+  }),
+  outputSchema: z.object({
+    success: z.boolean(),
+    message: z.string(),
+  }),
+  execute: async ({ context }) => {
+    try {
+      await fs.writeFile(context.filePath, context.content || '');
+      return { success: true, message: `File '${context.filePath}' created successfully` };
+    } catch (error: any) {
+      throw new Error(`Failed to create file '${context.filePath}': ${error.message}`);
+    }
+  },
+});
+
+const create_folder = createTool({
+  id: 'create-folder',
+  description: 'Creates a new folder (directory).',
+  inputSchema: z.object({
+    folderPath: z.string().describe('The path for the new folder'),
+  }),
+  outputSchema: z.object({
+    success: z.boolean(),
+    message: z.string(),
+  }),
+  execute: async ({ context }) => {
+    try {
+      await fs.mkdir(context.folderPath, { recursive: true }); // recursive: true allows creating parent directories if they don't exist
+      return { success: true, message: `Folder '${context.folderPath}' created successfully` };
+    } catch (error: any) {
+      throw new Error(`Failed to create folder '${context.folderPath}': ${error.message}`);
+    }
+  },
+});
+
 export const fileSystemTools = {
   read_file_content,
   list_directory,
   move_file,
   search_file_semantic,
+  delete_file,
+  compress_file,
+  create_file, // Added new tool
+  create_folder, // Added new tool
 };

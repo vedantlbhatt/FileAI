@@ -7,7 +7,7 @@
     "dev": "mastra dev",
     "build": "mastra build",
     "start": "mastra start",
-    "start-api": "ts-node src/api-server.ts"
+    "start-api": "node --experimental-specifier-resolution=node dist/api-server.js"
   },
   "keywords": [],
   "author": "",
@@ -23,7 +23,9 @@
     "@mastra/libsql": "^0.14.3",
     "@mastra/loggers": "^0.10.13",
     "@mastra/memory": "^0.15.3",
+    "@types/cors": "^2.8.19",
     "@types/express": "^5.0.3",
+    "cors": "^2.8.5",
     "express": "^5.1.0",
     "zod": "^3.25.76"
   },

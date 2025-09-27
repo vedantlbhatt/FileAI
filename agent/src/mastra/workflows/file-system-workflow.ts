@@ -102,21 +102,21 @@ const executeFileSystemOperation = createStep({
 
     switch (inputData.operation) {
       case 'read_file_content':
-        return await fileSystemTools.read_file_content.execute({ ...mockExecutionContext, context: inputData.args });
+        return await fileSystemTools.read_file_content.execute({ ...mockExecutionContext, context: { filePath: inputData.args.filePath } });
       case 'list_directory':
-        return await fileSystemTools.list_directory.execute({ ...mockExecutionContext, context: inputData.args });
+        return await fileSystemTools.list_directory.execute({ ...mockExecutionContext, context: { directoryPath: inputData.args.directoryPath } });
       case 'move_file':
-        return await fileSystemTools.move_file.execute({ ...mockExecutionContext, context: inputData.args });
+        return await fileSystemTools.move_file.execute({ ...mockExecutionContext, context: { sourcePath: inputData.args.sourcePath, destinationPath: inputData.args.destinationPath } });
       case 'search_file_semantic':
-        return await fileSystemTools.search_file_semantic.execute({ ...mockExecutionContext, context: inputData.args });
+        return await fileSystemTools.search_file_semantic.execute({ ...mockExecutionContext, context: { query: inputData.args.query, targetDirectory: inputData.args.targetDirectory } });
       case 'delete_file': // New case for delete_file
-        return await fileSystemTools.delete_file.execute({ ...mockExecutionContext, context: inputData.args });
+        return await fileSystemTools.delete_file.execute({ ...mockExecutionContext, context: { filePath: inputData.args.filePath } });
       case 'compress_file': // New case for compress_file
-        return await fileSystemTools.compress_file.execute({ ...mockExecutionContext, context: inputData.args });
+        return await fileSystemTools.compress_file.execute({ ...mockExecutionContext, context: { filePath: inputData.args.filePath, outputFilePath: inputData.args.outputFilePath } });
       case 'create_file': // New case for create_file
-        return await fileSystemTools.create_file.execute({ ...mockExecutionContext, context: inputData.args });
+        return await fileSystemTools.create_file.execute({ ...mockExecutionContext, context: { filePath: inputData.args.filePath, content: inputData.args.content } });
       case 'create_folder': // New case for create_folder
-        return await fileSystemTools.create_folder.execute({ ...mockExecutionContext, context: inputData.args });
+        return await fileSystemTools.create_folder.execute({ ...mockExecutionContext, context: { folderPath: inputData.args.folderPath } });
       case 'clarification':
         return { message: inputData.args.text }; // Return clarification message directly
       default:

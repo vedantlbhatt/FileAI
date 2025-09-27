@@ -1,6 +1,5 @@
 import express from 'express';
-import { mastra } from './mastra/workflows/file-system-workflow.ts';
-import { fileSystemWorkflow } from './mastra/workflows/file-system-workflow';
+import { mastra } from './mastra/index.js';
 
 const app = express();
 const port = 3000; // Choose a port for your API server

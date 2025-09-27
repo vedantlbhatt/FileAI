@@ -1,6 +1,7 @@
 import { createTool } from '@mastra/core/tools';
 import { z } from 'zod';
 import * as fs from 'fs/promises';
+import * as fsSync from 'fs';
 import * as path from 'path';
 import * as zlib from 'zlib'; // Import zlib for compression
 import { pipeline } from 'stream/promises'; // Import pipeline for streams
@@ -26,17 +27,49 @@ const read_file_content = createTool({
 
 const list_directory = createTool({
   id: 'list-directory',
-  description: 'Lists the contents of a specified directory',
+  description: 'Lists the contents of a specified directory with detailed file information',
   inputSchema: z.object({
     directoryPath: z.string().describe('The path to the directory to list'),
   }),
   outputSchema: z.object({
-    contents: z.array(z.string()),
+    contents: z.array(z.object({
+      name: z.string(),
+      type: z.string(),
+      size: z.number().optional(),
+      path: z.string(),
+    })),
   }),
   execute: async ({ context }) => {
     try {
-      const contents = await fs.readdir(context.directoryPath);
-      return { contents };
+      const contents = await fs.readdir(context.directoryPath, { withFileTypes: true });
+      const detailedContents = await Promise.all(
+        contents.map(async (item) => {
+          const fullPath = path.join(context.directoryPath, item.name);
+          let size;
+          try {
+            const stats = await fs.stat(fullPath);
+            size = stats.size;
+          } catch (error) {
+            size = 0;
+          }
+          
+          return {
+            name: item.name,
+            type: item.isDirectory() ? 'directory' : 'file',
+            size: item.isDirectory() ? undefined : size,
+            path: fullPath,
+          };
+        })
+      );
+      
+      // Sort directories first, then files, both alphabetically
+      detailedContents.sort((a, b) => {
+        if (a.type === 'directory' && b.type !== 'directory') return -1;
+        if (a.type !== 'directory' && b.type === 'directory') return 1;
+        return a.name.localeCompare(b.name);
+      });
+      
+      return { contents: detailedContents };
     } catch (error: any) {
       throw new Error(`Failed to list directory: ${error.message}`);
     }
@@ -122,8 +155,8 @@ const compress_file = createTool({
       const outputPath = context.outputFilePath || `${inputPath}.gz`;
 
       const gzip = zlib.createGzip();
-      const source = fs.createReadStream(inputPath);
-      const destination = fs.createWriteStream(outputPath);
+      const source = fsSync.createReadStream(inputPath);
+      const destination = fsSync.createWriteStream(outputPath);
 
       await pipeline(source, gzip, destination);
 

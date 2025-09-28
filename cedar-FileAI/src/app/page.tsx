@@ -1,14 +1,6 @@
 'use client';
 
-import React from 'react';
-import { z } from 'zod';
-import {
-  useRegisterState,
-  useRegisterFrontendTool,
-  useSubscribeStateToAgentContext,
-} from 'cedar-os';
-
-import { ChatModeSelector } from '@/components/ChatModeSelector';
+import React, { useEffect, useState } from 'react';
 import { FileBrowser } from '@/components/FileBrowser';
 import { CedarCaptionChat } from '@/cedar/components/chatComponents/CedarCaptionChat';
 import { FloatingCedarChat } from '@/cedar/components/chatComponents/FloatingCedarChat';
@@ -18,90 +10,104 @@ import { DebuggerPanel } from '@/cedar/components/debugger';
 type ChatMode = 'floating' | 'sidepanel' | 'caption';
 
 export default function HomePage() {
-  // Cedar-OS chat components with mode selector
-  // Choose between caption, floating, or side panel chat modes
-  const [chatMode, setChatMode] = React.useState<ChatMode>('sidepanel');
+  const [chatMode, setChatMode] = useState<ChatMode>('caption');
+  const [isDark, setIsDark] = useState(false);
+  const [copiedPath, setCopiedPath] = useState<string>('');
 
-  // Cedar state for the main text that can be changed by the agent
-  const [mainText, setMainText] = React.useState('tell Cedar to change me');
+  const handleCopyPath = (path: string) => {
+    // Format the path in a more user-friendly way for the chat input
+    const formattedPath = `Please analyze this file: ${path}`;
+    setCopiedPath(formattedPath);
+    
+    // Clear the copied path after a short delay to prevent it from persisting
+    setTimeout(() => {
+      setCopiedPath('');
+    }, 1000);
+  };
 
-  // Cedar state for dynamically added text lines
-  const [textLines, setTextLines] = React.useState<string[]>([]);
+  // Detect and apply stored/system theme on first load
+  useEffect(() => {
+    if (
+      localStorage.theme === 'dark' ||
+      (!('theme' in localStorage) &&
+        window.matchMedia('(prefers-color-scheme: dark)').matches)
+    ) {
+      document.documentElement.classList.add('dark');
+      setIsDark(true);
+    } else {
+      document.documentElement.classList.remove('dark');
+      setIsDark(false);
+    }
+  }, []);
 
-  // Register the main text as Cedar state with a state setter
-  useRegisterState({
-    key: 'mainText',
-    description: 'The main text that can be modified by Cedar',
-    value: mainText,
-    setValue: setMainText,
-    stateSetters: {
-      changeText: {
-        name: 'changeText',
-        description: 'Change the main text to a new value',
-        argsSchema: z.object({
-          newText: z.string().min(1, 'Text cannot be empty').describe('The new text to display'),
-        }),
-        execute: (
-          currentText: string,
-          setValue: (newValue: string) => void,
-          args: { newText: string },
-        ) => {
-          setValue(args.newText);
-        },
-      },
-    },
-  });
+  // Toggle theme manually
+  const toggleDarkMode = () => {
+    if (isDark) {
+      document.documentElement.classList.remove('dark');
+      localStorage.theme = 'light';
+      setIsDark(false);
+    } else {
+      document.documentElement.classList.add('dark');
+      localStorage.theme = 'dark';
+      setIsDark(true);
+    }
+  };
 
-  // Subscribe the main text state to the backend
-  useSubscribeStateToAgentContext('mainText', (mainText) => ({ mainText }), {
-    showInChat: true,
-    color: '#4F46E5',
-  });
-
-  // Register frontend tool for adding text lines
-  useRegisterFrontendTool({
-    name: 'addNewTextLine',
-    description: 'Add a new line of text to the screen via frontend tool',
-    argsSchema: z.object({
-      text: z.string().min(1, 'Text cannot be empty').describe('The text to add to the screen'),
-      style: z
-        .enum(['normal', 'bold', 'italic', 'highlight'])
-        .optional()
-        .describe('Text style to apply'),
-    }),
-    execute: async (args: { text: string; style?: 'normal' | 'bold' | 'italic' | 'highlight' }) => {
-      const styledText =
-        args.style === 'bold'
-          ? `**${args.text}**`
-          : args.style === 'italic'
-            ? `*${args.text}*`
-            : args.style === 'highlight'
-              ? `🌟 ${args.text} 🌟`
-              : args.text;
-      setTextLines((prev) => [...prev, styledText]);
-    },
-  });
-
+  // Reusable content renderer
   const renderContent = () => (
-    <div className="relative h-screen w-full bg-gray-100">
-      <ChatModeSelector currentMode={chatMode} onModeChange={setChatMode} />
+    <div className="relative h-screen w-full bg-background transition-colors duration-300">
+      {/* Top-right Dark Mode Toggle */}
+      <div className="absolute top-4 right-4 flex items-center">
+        <button
+          onClick={toggleDarkMode}
+          className="flex items-center gap-2 rounded-full px-4 py-2 bg-muted text-foreground shadow-sm hover:bg-accent transition-colors duration-200"
+        >
+          {isDark ? (
+            <>
+              ☀️ <span className="hidden sm:inline">Light</span>
+            </>
+          ) : (
+            <>
+              🌙 <span className="hidden sm:inline">Dark</span>
+            </>
+          )}
+        </button>
+      </div>
 
       {/* Main File Browser Area */}
-      <div className="flex h-full pt-12 pb-4 px-4">
-        <div className="flex-1 max-w-6xl mx-auto">
-          <FileBrowser initialPath="/Users/rohannair" />
+      <div className="flex h-full pt-16 pb-4 px-4">
+        <div className="flex-1 max-w-6xl mx-auto flex flex-col gap-6">
+          {/* Friendly Instructions */}
+          <div className="rounded-2xl bg-accent/10 dark:bg-accent/20 text-foreground p-8 text-center shadow-lg border border-accent/40 backdrop-blur-sm">
+            <p className="text-3xl font-extrabold tracking-tight">
+              👋 Welcome to{' '}
+              <span className="bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 bg-clip-text text-transparent">
+                FileAI
+              </span>
+            </p>
+            <p className="mt-3 text-lg font-medium text-muted-foreground">
+              Use the file browser below to explore your system.  
+              You can also chat with the FileAI assistant for help at the bottom.
+            </p>
+          </div>
+
+          <FileBrowser initialPath="/Users/rohannair" onCopyPath={handleCopyPath} />
         </div>
       </div>
 
       {/* Chat overlays */}
-      {chatMode === 'caption' && <CedarCaptionChat />}
-
+      {chatMode === 'caption' && <CedarCaptionChat initialInput={copiedPath} />}
       {chatMode === 'floating' && (
-        <FloatingCedarChat side="right" title="FileAI Assistant" collapsedLabel="Chat with FileAI" />
+        <FloatingCedarChat
+          side="right"
+          title="FileAI Assistant"
+          collapsedLabel="Chat with FileAI"
+        />
       )}
     </div>
   );
 
+  // If side panel mode, wrap with chat panel
   if (chatMode === 'sidepanel') {
     return (
       <SidePanelCedarChat
@@ -116,5 +122,6 @@ export default function HomePage() {
     );
   }
 
+  // Otherwise just render content
   return renderContent();
 }

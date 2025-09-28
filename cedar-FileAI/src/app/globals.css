@@ -40,88 +40,195 @@
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) + 4px);
+  --radius-xl: calc(var(--radius) + 6px);
 }
 
+/* ðŸŒž Light mode - airy, breathable, cool neutrals */
 :root {
-  --radius: 0.625rem;
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
+  --radius: 0.75rem;
+  --background: oklch(0.985 0.02 240);
+  --foreground: oklch(0.18 0 0);
+  --card: oklch(0.99 0.015 250);
+  --card-foreground: oklch(0.22 0 0);
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.646 0.222 41.116);
-  --chart-2: oklch(0.6 0.118 184.704);
-  --chart-3: oklch(0.398 0.07 227.392);
-  --chart-4: oklch(0.828 0.189 84.429);
-  --chart-5: oklch(0.769 0.188 70.08);
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  --popover-foreground: oklch(0.22 0 0);
+  --primary: oklch(0.48 0.2 265);
+  --primary-foreground: oklch(0.98 0.02 250);
+  --secondary: oklch(0.96 0.02 220);
+  --secondary-foreground: oklch(0.22 0 0);
+  --muted: oklch(0.96 0.015 240);
+  --muted-foreground: oklch(0.48 0.05 240);
+  --accent: oklch(0.94 0.04 260);
+  --accent-foreground: oklch(0.22 0 0);
+  --destructive: oklch(0.55 0.25 30);
+  --border: oklch(0.9 0.02 240);
+  --input: oklch(0.95 0.01 250);
+  --ring: oklch(0.65 0.15 260);
+  --chart-1: oklch(0.62 0.22 250);
+  --chart-2: oklch(0.58 0.16 180);
+  --chart-3: oklch(0.42 0.07 230);
+  --chart-4: oklch(0.82 0.18 85);
+  --chart-5: oklch(0.76 0.19 65);
+  --sidebar: oklch(0.99 0.015 250);
+  --sidebar-foreground: oklch(0.2 0 0);
+  --sidebar-primary: oklch(0.48 0.2 265);
+  --sidebar-primary-foreground: oklch(0.98 0.02 250);
+  --sidebar-accent: oklch(0.94 0.04 260);
+  --sidebar-accent-foreground: oklch(0.22 0 0);
+  --sidebar-border: oklch(0.92 0.02 240);
+  --sidebar-ring: oklch(0.65 0.15 260);
 }
 
+/* ðŸŒ™ Dark mode - sleek, modern, low-clutter */
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.488 0.243 264.376);
-  --chart-2: oklch(0.696 0.17 162.48);
-  --chart-3: oklch(0.769 0.188 70.08);
-  --chart-4: oklch(0.627 0.265 303.9);
-  --chart-5: oklch(0.645 0.246 16.439);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  --background: oklch(0.16 0.02 250);
+  --foreground: oklch(0.96 0.01 250);
+  --card: oklch(0.20 0.015 250);
+  --card-foreground: oklch(0.96 0.01 250);
+  --popover: oklch(0.20 0.015 250);
+  --popover-foreground: oklch(0.96 0.01 250);
+
+  --primary: oklch(0.68 0.2 265);
+  --primary-foreground: oklch(0.16 0 0);
+
+  --secondary: oklch(0.28 0.02 240);
+  --secondary-foreground: oklch(0.95 0.01 250);
+
+  --muted: oklch(0.24 0.02 250);
+  --muted-foreground: oklch(0.7 0.02 250);
+
+  --accent: oklch(0.34 0.03 250);
+  --accent-foreground: oklch(0.95 0.01 250);
+
+  --destructive: oklch(0.65 0.23 30);
+
+  --border: oklch(0.32 0.01 250);
+  --input: oklch(0.26 0.01 250);
+  --ring: oklch(0.6 0.12 260);
+
+  --sidebar: oklch(0.20 0.015 250);
+  --sidebar-foreground: oklch(0.96 0.01 250);
+  --sidebar-primary: oklch(0.68 0.2 265);
+  --sidebar-primary-foreground: oklch(0.16 0 0);
+  --sidebar-accent: oklch(0.34 0.03 250);
+  --sidebar-accent-foreground: oklch(0.95 0.01 250);
+  --sidebar-border: oklch(0.32 0.01 250);
+  --sidebar-ring: oklch(0.6 0.12 260);
 }
 
 @layer base {
   * {
-    @apply border-border outline-ring/50;
+    @apply border-border outline-ring/40 transition-colors duration-300;
   }
+
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground font-sans antialiased;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    @apply font-semibold tracking-tight;
+  }
+
+  button {
+    @apply px-4 py-2 rounded-lg font-medium transition-all duration-300 ease-out;
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--foreground);
+  }
+
+  .dark button {
+    background: var(--card);
+    border: 1px solid var(--ring);
+    color: var(--foreground);
+  }
+
+  button:hover {
+    border-color: var(--ring);
+    background-color: oklch(0.22 0.015 250 / 0.6);
+    transform: translateY(-2px);
+  }
+
+  textarea,
+  input {
+    background: var(--card);
+    color: var(--foreground);
+    border: 1px solid var(--border);
+    @apply rounded-lg px-3 py-2;
+  }
+
+  textarea::placeholder,
+  input::placeholder {
+    color: var(--muted-foreground);
   }
 }
 
 /* Custom grid for file browser */
 .grid-cols-auto-fill-120 {
   grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+}
+
+/* ðŸ”¥ Hide Cedar chat quick-action buttons */
+.cedar-chat-toolbar button,
+.cedar-chat-actions,
+.cedar-chat-quick-actions {
+  display: none !important;
+}
+
+/* Force middle chat area to respect dark mode */
+.cedar-chat,
+.cedar-chat * {
+  background: var(--card) !important;
+  color: var(--foreground) !important;
+}
+
+/* Catch-all: hide any buttons above the chat input */
+[class*="chat"] [class*="toolbar"] button {
+  display: none !important;
+}
+
+/* Hide ONLY the toolbar above the chat input */
+div[class*="chat"] div[class*="toolbar"],
+div[class*="chat"] div[class*="actions"] {
+  display: none !important;
+}
+
+/* Hide the immediate sibling above the input box */
+textarea[name="chat-input"]~div {
+  display: none !important;
+}
+
+/* Hide all buttons inside Cedar chat except the send button */
+.cedar-chat button:not([type="submit"]) {
+  display: none !important;
+}
+
+
+/* Default readable text in chat bubbles */
+.chat-bubble,
+.chat-area {
+  @apply text-gray-800 text-base leading-relaxed;
+}
+
+/* Dark mode variant */
+.dark .chat-bubble,
+.dark .chat-area {
+  @apply text-gray-200 text-base leading-relaxed;
+}
+
+
+/* global.css */
+
+/* Light mode chat bubble text */
+.embedded-cedar-chat .chat-bubble {
+  @apply text-gray-800 text-base leading-relaxed;
+}
+
+/* Dark mode chat bubble text */
+.dark .embedded-cedar-chat .chat-bubble {
+  @apply text-gray-200 text-base leading-relaxed;
 }

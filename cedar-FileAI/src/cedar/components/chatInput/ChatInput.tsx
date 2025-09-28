@@ -24,7 +24,8 @@ export const ChatInput: React.FC<{
   isInputFocused?: boolean;
   className?: string; // Additional classes for the container
   stream?: boolean; // Whether to use streaming for responses
-}> = ({ handleFocus, handleBlur, isInputFocused, className = '', stream = true }) => {
+  initialValue?: string; // New prop for initial input value
+}> = ({ handleFocus, handleBlur, isInputFocused, className = '', stream = true, initialValue }) => {
   const [isFocused, setIsFocused] = React.useState(false);
 
   const { editor, isEditorEmpty, handleSubmit } = useCedarEditor({
@@ -90,6 +91,13 @@ export const ChatInput: React.FC<{
       editor.commands.focus();
     }
   }, [isInputFocused, editor]);
+
+  // Set initial value for the editor
+  useEffect(() => {
+    if (editor && initialValue) {
+      editor.commands.setContent(initialValue, false);
+    }
+  }, [editor, initialValue]);
 
   // Handle tab key to focus the editor and escape to unfocus
   useEffect(() => {

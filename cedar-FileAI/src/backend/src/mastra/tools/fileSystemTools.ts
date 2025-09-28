@@ -5,22 +5,33 @@ import * as fsSync from 'fs';
 import * as path from 'path';
 import * as zlib from 'zlib';
 import { pipeline } from 'stream/promises';
+import { execFile } from 'child_process';
+import { promisify } from 'util';
+
+
+const execFileAsync = promisify(execFile);
 
 export const readFileContent = createTool({
   id: 'read-file-content',
-  description: 'Reads the content of a specified file',
+  description: 'Reads and parses content of a specified file via Python parser, can take in any file format',
   inputSchema: z.object({
     filePath: z.string().describe('The path to the file to read'),
   }),
   outputSchema: z.object({
-    content: z.string(),
+    type: z.enum(["text", "image", "metadata"]).describe("Type of the output"),
+    content: z.string().optional(),
+    metadata: z.record(z.any()).optional(),
   }),
   execute: async ({ context }) => {
     try {
-      const content = await fs.readFile(context.filePath, 'utf-8');
-      return { content };
+      const pythonScriptPath = '/Users/rohannair/Desktop/Projects/HackGT/FileAI/cedar-FileAI/src/backend/fileParse.py'; // adjust path as needed
+      const { stdout } = await execFileAsync('python3', [pythonScriptPath, context.filePath], {
+        maxBuffer: 10 * 1024 * 1024, // 10MB max output, adjust if needed
+      });
+      const parsed = JSON.parse(stdout);
+      return parsed;
     } catch (error: any) {
-      throw new Error(`Failed to read file: ${error.message}`);
+      throw new Error(`Failed to run Python parser: ${error.message}`);
     }
   },
 });
@@ -97,6 +108,9 @@ export const moveFile = createTool({
   },
 });
 
+
+
+
 export const searchFilesSemantic = createTool({
   id: 'search-files-semantic',
   description: 'Semantically searches for files based on content or name',
@@ -105,21 +119,39 @@ export const searchFilesSemantic = createTool({
     targetDirectory: z.string().describe('The directory to search in').optional(),
   }),
   outputSchema: z.object({
-    results: z.array(z.string()),
+    text_results: z.array(z.object({
+      file_path: z.string(),
+      semantic_score: z.number(),
+      keyword_score: z.number(),
+      combined_score: z.number(),
+    })),
+    image_results: z.array(z.object({
+      file_path: z.string(),
+      region_index: z.number(),
+      final_score: z.number(),
+      semantic_score: z.number(),
+      distance: z.number(),
+      caption: z.string(),
+    })),
   }),
   execute: async ({ context }) => {
     try {
-      const searchDir = context.targetDirectory || process.cwd();
-      const files = await fs.readdir(searchDir, { recursive: true });
-      const filteredFiles = files
-        .filter(file => typeof file === 'string' && file.toLowerCase().includes(context.query.toLowerCase()))
-        .slice(0, 10); // Limit results
-      return { results: filteredFiles };
+      const pythonScriptPath = '/Users/rohannair/Desktop/Projects/HackGT/FileAI/cedar-FileAI/src/backend/semanticSearch.py';
+      const args = [
+        context.targetDirectory || '',
+        context.query,
+      ];
+      const { stdout } = await execFileAsync('python3', [pythonScriptPath, ...args], {
+        maxBuffer: 10 * 1024 * 1024, 
+      });
+      const parsed = JSON.parse(stdout);
+      return parsed;
     } catch (error: any) {
-      throw new Error(`Failed to search files: ${error.message}`);
+      throw new Error(`Failed to run Python parser: ${error.message}`);
     }
   },
 });
+
 
 export const deleteFile = createTool({
   id: 'delete-file',

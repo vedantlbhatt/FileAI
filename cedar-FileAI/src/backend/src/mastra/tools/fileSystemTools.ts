@@ -7,6 +7,7 @@ import * as zlib from 'zlib';
 import { pipeline } from 'stream/promises';
 import { execFile } from 'child_process';
 import { promisify } from 'util';
+import { exec as execAsync } from 'child_process';
 
 
 const execFileAsync = promisify(execFile);
@@ -109,8 +110,6 @@ export const moveFile = createTool({
 });
 
 
-
-
 export const searchFilesSemantic = createTool({
   id: 'search-files-semantic',
   description: 'Semantically searches for files based on content or name',
@@ -119,38 +118,62 @@ export const searchFilesSemantic = createTool({
     targetDirectory: z.string().describe('The directory to search in').optional(),
   }),
   outputSchema: z.object({
-    text_results: z.array(z.object({
-      file_path: z.string(),
-      semantic_score: z.number(),
-      keyword_score: z.number(),
-      combined_score: z.number(),
-    })),
-    image_results: z.array(z.object({
-      file_path: z.string(),
-      region_index: z.number(),
-      final_score: z.number(),
-      semantic_score: z.number(),
-      distance: z.number(),
-      caption: z.string(),
-    })),
+    results: z.array(z.string()),
   }),
   execute: async ({ context }) => {
     try {
-      const pythonScriptPath = '/Users/rohannair/Desktop/Projects/HackGT/FileAI/cedar-FileAI/src/backend/semanticSearch.py';
-      const args = [
-        context.targetDirectory || '',
-        context.query,
-      ];
-      const { stdout } = await execFileAsync('python3', [pythonScriptPath, ...args], {
-        maxBuffer: 10 * 1024 * 1024, 
-      });
-      const parsed = JSON.parse(stdout);
-      return parsed;
+      const searchDir = context.targetDirectory || process.cwd();
+      const files = await fs.readdir(searchDir, { recursive: true });
+      const filteredFiles = files
+        .filter(file => typeof file === 'string' && file.toLowerCase().includes(context.query.toLowerCase()))
+        .slice(0, 10); // Limit results
+      return { results: filteredFiles };
     } catch (error: any) {
-      throw new Error(`Failed to run Python parser: ${error.message}`);
+      throw new Error(`Failed to search files: ${error.message}`);
     }
   },
 });
+
+// export const searchFilesSemantic = createTool({
+//   id: 'search-files-semantic',
+//   description: 'Semantically searches for files based on content or name',
+//   inputSchema: z.object({
+//     query: z.string().describe('The semantic search query'),
+//     targetDirectory: z.string().describe('The directory to search in').optional(),
+//   }),
+//   outputSchema: z.object({
+//     text_results: z.array(z.object({
+//       file_path: z.string(),
+//       semantic_score: z.number(),
+//       keyword_score: z.number(),
+//       combined_score: z.number(),
+//     })),
+//     image_results: z.array(z.object({
+//       file_path: z.string(),
+//       region_index: z.number(),
+//       final_score: z.number(),
+//       semantic_score: z.number(),
+//       distance: z.number(),
+//       caption: z.string(),
+//     })),
+//   }),
+//   execute: async ({ context }) => {
+//     try {
+//       const pythonScriptPath = '/Users/rohannair/Desktop/Projects/HackGT/FileAI/cedar-FileAI/src/backend/semanticSearch.py';
+//       const args = [
+//         context.targetDirectory || '',
+//         context.query,
+//       ];
+//       const { stdout } = await execFileAsync('python3', [pythonScriptPath, ...args], {
+//         maxBuffer: 10 * 1024 * 1024, 
+//       });
+//       const parsed = JSON.parse(stdout);
+//       return parsed;
+//     } catch (error: any) {
+//       throw new Error(`Failed to run Python parser: ${error.message}`);
+//     }
+//   },
+// });
 
 
 export const deleteFile = createTool({
@@ -175,10 +198,10 @@ export const deleteFile = createTool({
 
 export const compressFile = createTool({
   id: 'compress-file',
-  description: 'Compresses a specified file using gzip',
+  description: 'Compresses a specified file or directory. Files -> gzip (.gz), Directories -> tar.gz (.tar.gz)',
   inputSchema: z.object({
-    filePath: z.string().describe('The path to the file to compress'),
-    outputFilePath: z.string().describe('The path for the compressed output file (e.g., file.txt.gz)').optional(),
+    filePath: z.string().describe('The path to the file or directory to compress'),
+    outputFilePath: z.string().describe('The path for the compressed output file (e.g., file.txt.gz or folder.tar.gz)').optional(),
   }),
   outputSchema: z.object({
     success: z.boolean(),
@@ -188,17 +211,43 @@ export const compressFile = createTool({
   execute: async ({ context }) => {
     try {
       const inputPath = context.filePath;
-      const outputPath = context.outputFilePath || `${inputPath}.gz`;
+      const stats = await fs.stat(inputPath);
 
-      const gzip = zlib.createGzip();
-      const source = fsSync.createReadStream(inputPath);
-      const destination = fsSync.createWriteStream(outputPath);
+      let outputPath = context.outputFilePath;
+      if (!outputPath) {
+        outputPath = stats.isDirectory()
+          ? `${inputPath}.tar.gz`
+          : `${inputPath}.gz`;
+      }
 
-      await pipeline(source, gzip, destination);
+      if (stats.isDirectory()) {
+        // Compress directory using tar
+        const parentDir = inputPath.substring(0, inputPath.lastIndexOf('/')) || '.';
+        const dirName = inputPath.substring(inputPath.lastIndexOf('/') + 1);
 
-      return { success: true, message: `File '${inputPath}' compressed to '${outputPath}'`, outputFilePath: outputPath };
+        await execAsync(`tar -czf "${outputPath}" -C "${parentDir}" "${dirName}"`);
+
+        return {
+          success: true,
+          message: `Directory '${inputPath}' compressed to '${outputPath}'`,
+          outputFilePath: outputPath,
+        };
+      } else {
+        // Compress file using gzip
+        const gzip = zlib.createGzip();
+        const source = fsSync.createReadStream(inputPath);
+        const destination = fsSync.createWriteStream(outputPath);
+
+        await pipeline(source, gzip, destination);
+
+        return {
+          success: true,
+          message: `File '${inputPath}' compressed to '${outputPath}'`,
+          outputFilePath: outputPath,
+        };
+      }
     } catch (error: any) {
-      throw new Error(`Failed to compress file '${context.filePath}': ${error.message}`);
+      throw new Error(`Failed to compress '${context.filePath}': ${error.message}`);
     }
   },
 });
